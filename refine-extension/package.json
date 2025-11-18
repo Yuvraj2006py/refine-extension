@@ -1,0 +1,15 @@
+{
+  "name": "refine-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "node clean.js",
+    "build": "npm run clean && node build.js && node copyStatic.js",
+    "watch": "node build.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,25 @@
+#refine-overlay {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483647;
+  max-width: 320px;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: #1f1f1f;
+}
+
+.refine-placeholder {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px dashed #c5c5c5;
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.refine-suggestion-item,
+.refine-critical-item {
+  margin-bottom: 4px;
+}
+
+/* TODO: Replace placeholder box with contextual UI anchored to the textbox. */

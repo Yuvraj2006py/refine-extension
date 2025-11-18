@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Refine</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="refine-panel">
+      <h1>Refine Prompt</h1>
+      <!-- TODO: Auto-import prompt from currently focused textbox. -->
+      <label class="field">
+        <span>Original Prompt</span>
+        <textarea id="refine-input" rows="6" placeholder="Paste your prompt..."></textarea>
+      </label>
+
+      <div class="controls">
+        <label>
+          Mode
+          <select id="refine-mode">
+            <option value="structured">Structured</option>
+            <option value="steps">Steps</option>
+            <!-- TODO: Template / Creative / Expert / Power modes. -->
+          </select>
+        </label>
+        <label>
+          Tone
+          <select id="refine-tone">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual</option>
+            <option value="technical">Technical</option>
+            <!-- TODO: Additional tones (friendly, persuasive, etc.). -->
+          </select>
+        </label>
+      </div>
+
+      <!-- TODO: Include examples toggle + complexity slider. -->
+
+      <div class="actions">
+        <button id="refine-rewrite">Rewrite</button>
+        <button id="refine-regenerate" class="secondary">Regenerate</button>
+      </div>
+
+      <label class="field">
+        <span>Refined Prompt</span>
+        <textarea id="refine-output" rows="8" placeholder="Your rewrite will appear here..."></textarea>
+      </label>
+    </main>
+
+    <!-- Built JS will be generated from popup.ts during the build step. -->
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
