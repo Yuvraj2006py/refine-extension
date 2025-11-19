@@ -6,48 +6,82 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main class="refine-panel">
-      <h1>Refine Prompt</h1>
-      <!-- TODO: Auto-import prompt from currently focused textbox. -->
-      <label class="field">
-        <span>Original Prompt</span>
-        <textarea id="refine-input" rows="6" placeholder="Paste your prompt..."></textarea>
-      </label>
+    <main class="refine-panel" role="main">
+      <header class="panel-header">
+        <h1>Refine Prompt</h1>
+        <button id="refine-import" type="button" class="ghost-button">Import Current Prompt</button>
+      </header>
+      <section class="field">
+        <label for="refine-input">Original Prompt</label>
+        <textarea id="refine-input" rows="6" placeholder="Prompt from ChatGPT will appear here"></textarea>
+      </section>
 
-      <div class="controls">
-        <label>
-          Mode
+      <section class="field-group" aria-label="Rewrite controls">
+        <label class="field">
+          <span>Mode</span>
           <select id="refine-mode">
+            <option value="cleaned">Cleaned</option>
             <option value="structured">Structured</option>
             <option value="steps">Steps</option>
-            <!-- TODO: Template / Creative / Expert / Power modes. -->
+            <option value="template">Template</option>
+            <option value="creative">Creative</option>
+            <option value="expert">Expert</option>
+            <option value="power">Power</option>
           </select>
         </label>
-        <label>
-          Tone
+        <label class="field">
+          <span>Tone</span>
           <select id="refine-tone">
             <option value="professional">Professional</option>
             <option value="casual">Casual</option>
             <option value="technical">Technical</option>
-            <!-- TODO: Additional tones (friendly, persuasive, etc.). -->
           </select>
         </label>
-      </div>
+      </section>
 
-      <!-- TODO: Include examples toggle + complexity slider. -->
+      <section class="toggles">
+        <label class="toggle">
+          <input type="checkbox" id="refine-multiple" />
+          <span>Generate multiple versions</span>
+        </label>
+        <label class="slider" for="refine-complexity">
+          <span>Complexity <output id="complexity-value">5</output></span>
+          <input type="range" id="refine-complexity" min="0" max="10" step="1" />
+        </label>
+      </section>
+
+      <section class="overlay-settings">
+        <h2>Overlay Features</h2>
+        <label class="toggle">
+          <input type="checkbox" id="overlay-enabled" />
+          <span>Enable overlay UI</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="ghost-enabled" />
+          <span>Ghost text</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="suggestions-enabled" />
+          <span>Suggestions</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="critical-enabled" />
+          <span>Critical errors</span>
+        </label>
+      </section>
 
       <div class="actions">
-        <button id="refine-rewrite">Rewrite</button>
-        <button id="refine-regenerate" class="secondary">Regenerate</button>
+        <button id="refine-rewrite" type="button">Rewrite</button>
+        <button id="refine-regenerate" type="button" class="secondary">Regenerate</button>
       </div>
 
-      <label class="field">
-        <span>Refined Prompt</span>
-        <textarea id="refine-output" rows="8" placeholder="Your rewrite will appear here..."></textarea>
-      </label>
+      <section class="field">
+        <label for="refine-output">Refined Prompt</label>
+        <textarea id="refine-output" rows="8" placeholder="Your rewrite will appear here"></textarea>
+      </section>
+      <section id="refine-versions" class="refine-versions hidden" aria-live="polite"></section>
     </main>
 
-    <!-- Built JS will be generated from popup.ts during the build step. -->
     <script type="module" src="popup.js"></script>
   </body>
 </html>

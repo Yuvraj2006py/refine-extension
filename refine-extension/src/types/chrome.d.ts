@@ -26,5 +26,45 @@ declare namespace chrome {
     function sendMessage(message: any, responseCallback?: MessageResponseCallback): void;
 
     let lastError: { message?: string } | undefined;
+
+    function getURL(path: string): string;
+  }
+
+  namespace storage {
+    interface StorageArea {
+      get(
+        keys: string | string[] | Record<string, unknown>,
+        callback: (items: Record<string, unknown>) => void
+      ): void;
+      set(items: Record<string, unknown>, callback: () => void): void;
+    }
+
+    const sync: StorageArea;
+
+    interface StorageChange {
+      oldValue?: unknown;
+      newValue?: unknown;
+    }
+
+    namespace onChanged {
+      function addListener(
+        callback: (changes: Record<string, StorageChange>, areaName: "sync" | "local") => void
+      ): void;
+    }
+  }
+
+  namespace tabs {
+    interface Tab {
+      id?: number;
+      url?: string;
+      active?: boolean;
+    }
+
+    function query(
+      queryInfo: { active?: boolean; currentWindow?: boolean },
+      callback: (tabs: Tab[]) => void
+    ): void;
+
+    function sendMessage(tabId: number, message: any, responseCallback?: (response?: any) => void): void;
   }
 }

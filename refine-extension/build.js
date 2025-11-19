@@ -1,5 +1,6 @@
 import { build, context } from "esbuild";
 import path from "path";
+import { config as loadEnv } from "dotenv";
 
 const entryPoints = [
   "src/background/background.ts",
@@ -7,6 +8,15 @@ const entryPoints = [
   "src/content/overlay.ts",
   "src/popup/popup.ts"
 ];
+
+const envPath = path.resolve(".env");
+loadEnv({ path: envPath });
+
+const REFINE_ENV = {
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+  OPENAI_MODEL: process.env.OPENAI_MODEL ?? "gpt-5-nano"
+};
 
 const buildOptions = {
   bundle: true,
@@ -18,7 +28,12 @@ const buildOptions = {
   outbase: "src",
   outdir: "dist",
   sourcemap: false,
-  logLevel: "info"
+  logLevel: "info",
+  banner: {
+    js: `globalThis.REFINE_ENV = Object.assign({}, globalThis.REFINE_ENV, ${JSON.stringify(
+      REFINE_ENV
+    )});`
+  }
 };
 
 async function run() {

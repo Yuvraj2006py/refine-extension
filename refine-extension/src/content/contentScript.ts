@@ -5,11 +5,14 @@ import {
   SuggestionsRequest
 } from "../types/messages";
 import {
+  attachOverlayToActiveTextarea,
+  clearOverlay,
+  renderCriticalErrors,
   renderGhostText,
   renderSuggestions,
-  renderCriticalErrors,
-  clearOverlay
+  setOverlayFlags
 } from "./overlay";
+import { DEFAULT_PREFERENCES, preferenceManager, RefinePreferences } from "./preferences";
 
 const TYPING_PAUSE_MS = 600;
 
@@ -18,11 +21,33 @@ type EditableElement = HTMLTextAreaElement | HTMLDivElement;
 let activeInput: EditableElement | null = null;
 let pauseTimer: number | null = null;
 let lastTextValue = "";
+let preferences: RefinePreferences = DEFAULT_PREFERENCES;
+
+void preferenceManager.init().then((prefs) => {
+  preferences = prefs;
+  setOverlayFlags({
+    overlayEnabled: prefs.overlayEnabled,
+    ghostTextEnabled: prefs.ghostTextEnabled,
+    suggestionsEnabled: prefs.suggestionsEnabled,
+    criticalErrorsEnabled: prefs.criticalErrorsEnabled
+  });
+});
+
+preferenceManager.subscribe((prefs) => {
+  preferences = prefs;
+  setOverlayFlags({
+    overlayEnabled: prefs.overlayEnabled,
+    ghostTextEnabled: prefs.ghostTextEnabled,
+    suggestionsEnabled: prefs.suggestionsEnabled,
+    criticalErrorsEnabled: prefs.criticalErrorsEnabled
+  });
+});
 
 init();
 
 /** Bootstraps textbox detection and pause monitoring. */
 function init(): void {
+  injectOverlayStyles();
   locateTextInput();
   const observer = new MutationObserver(() => {
     if (activeInput && document.contains(activeInput)) {
@@ -39,7 +64,9 @@ function init(): void {
 
 /** Searches for the primary textbox on ChatGPT-style pages. */
 function locateTextInput(): void {
-  const textarea = document.querySelector<HTMLTextAreaElement>("textarea");
+  const textarea =
+    document.querySelector<HTMLTextAreaElement>('textarea[data-id="prompt-textarea"]') ??
+    document.querySelector<HTMLTextAreaElement>("textarea");
   const divInput = document.querySelector<HTMLDivElement>('div[role="textbox"]');
   // TODO: Extend detection to other AI chat products beyond ChatGPT.
   const candidate = textarea ?? divInput;
@@ -47,6 +74,9 @@ function locateTextInput(): void {
   if (candidate && candidate !== activeInput) {
     activeInput = candidate;
     attachInputListener(candidate);
+    if (candidate instanceof HTMLTextAreaElement) {
+      attachOverlayToActiveTextarea();
+    }
     console.info("[Refine] Attached to textbox", candidate);
   }
 }
@@ -96,6 +126,9 @@ function getWordCount(text: string): number {
 
 /** Sends autocomplete request to the background service. */
 async function requestAutocomplete(text: string): Promise<void> {
+  if (!preferences?.ghostTextEnabled || !preferences.overlayEnabled) {
+    return;
+  }
   const request: AutocompleteRequest = { type: "autocomplete", text };
   try {
     const response = await sendRuntimeMessage(request);
@@ -109,6 +142,9 @@ async function requestAutocomplete(text: string): Promise<void> {
 
 /** Sends suggestion request to the background worker. */
 async function requestSuggestions(text: string): Promise<void> {
+  if (!preferences?.suggestionsEnabled) {
+    return;
+  }
   const request: SuggestionsRequest = { type: "suggestions", text };
   try {
     const response = await sendRuntimeMessage(request);
@@ -122,6 +158,9 @@ async function requestSuggestions(text: string): Promise<void> {
 
 /** Sends critical error detection request. */
 async function requestCriticalErrors(text: string): Promise<void> {
+  if (!preferences?.criticalErrorsEnabled) {
+    return;
+  }
   const request: CriticalErrorsRequest = { type: "criticalErrors", text };
   try {
     const response = await sendRuntimeMessage(request);
@@ -162,3 +201,21 @@ function sendRuntimeMessage(
     });
   });
 }
+
+function injectOverlayStyles(): void {
+  if (document.getElementById("refine-overlay-style")) {
+    return;
+  }
+  const link = document.createElement("link");
+  link.id = "refine-overlay-style";
+  link.rel = "stylesheet";
+  link.href = chrome.runtime.getURL("dist/content/overlay.css");
+  document.head.appendChild(link);
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "getActivePrompt") {
+    const text = activeInput ? getTextValue(activeInput) : "";
+    sendResponse({ text });
+  }
+});

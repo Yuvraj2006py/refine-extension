@@ -13,33 +13,35 @@ import {
   SuggestionsResult
 } from "../types/messages";
 import {
+  OpenAIChatMessage,
   buildAutocompletePrompt,
   buildCriticalErrorPrompt,
   buildRewritePrompt,
   buildSuggestionPrompt,
-  callModel,
-  OpenAIChatMessage
+  callModel
 } from "../api/llm";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 400;
 
-chrome.runtime.onMessage.addListener((request: BackgroundRequest, _sender, sendResponse) => {
-  (async () => {
-    try {
-      const response = await routeRequest(request);
-      sendResponse(response);
-    } catch (error) {
-      console.error("Refine background error", error);
-      sendResponse({ error: (error as Error).message });
-    }
-  })();
+if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((request: BackgroundRequest, _sender, sendResponse) => {
+    (async () => {
+      try {
+        const response = await routeRequest(request);
+        sendResponse(response);
+      } catch (error) {
+        console.error("Refine background error", error);
+        sendResponse({ error: (error as Error).message });
+      }
+    })();
 
-  return true;
-});
+    return true;
+  });
+}
 
 /** Routes incoming messages to the appropriate handler. */
-async function routeRequest(request: BackgroundRequest): Promise<BackgroundResponse> {
+export async function routeRequest(request: BackgroundRequest): Promise<BackgroundResponse> {
   switch (request.type) {
     case "autocomplete": {
       const data = await handleAutocomplete(request);
@@ -63,7 +65,7 @@ async function routeRequest(request: BackgroundRequest): Promise<BackgroundRespo
 }
 
 /** Attempts the model call a few times before failing. */
-async function callWithRetry(
+export async function callWithRetry(
   messages: OpenAIChatMessage[],
   options?: { temperature?: number; maxTokens?: number }
 ): Promise<string> {
@@ -92,45 +94,56 @@ function delay(ms: number): Promise<void> {
 }
 
 /** Handles autocomplete requests into a one-sentence completion. */
-async function handleAutocomplete(request: AutocompleteRequest): Promise<AutocompleteResult> {
+export async function handleAutocomplete(
+  request: AutocompleteRequest
+): Promise<AutocompleteResult> {
   const completion = await callWithRetry(buildAutocompletePrompt(request.text), {
-    maxTokens: 64
+    maxTokens: 20
   });
   return { completion };
 }
 
 /** Handles suggestion generation and parsing results. */
-async function handleSuggestions(request: SuggestionsRequest): Promise<SuggestionsResult> {
+export async function handleSuggestions(request: SuggestionsRequest): Promise<SuggestionsResult> {
   const raw = await callWithRetry(buildSuggestionPrompt(request.text), {
-    maxTokens: 400
+    maxTokens: 180
   });
   return { suggestions: parseSuggestions(raw) };
 }
 
 /** Handles critical error detection requests. */
-async function handleCriticalErrors(
+export async function handleCriticalErrors(
   request: CriticalErrorsRequest
 ): Promise<CriticalErrorResult> {
   const raw = await callWithRetry(buildCriticalErrorPrompt(request.text), {
-    maxTokens: 240
+    maxTokens: 120
   });
   return { errors: parseCriticalErrors(raw) };
 }
 
 /** Handles popup rewrite requests for the selected mode and tone. */
-async function handleRewrite(request: RewriteRequest): Promise<RewriteResult> {
-  const text = await callWithRetry(
-    buildRewritePrompt(request.text, request.mode, request.tone),
+export async function handleRewrite(request: RewriteRequest): Promise<RewriteResult> {
+  const raw = await callWithRetry(
+    buildRewritePrompt(request.text, request.mode, request.tone, {
+      includeMultipleVersions: request.includeMultipleVersions,
+      complexity: request.complexity
+    }),
     {
-      maxTokens: 480,
-      temperature: 0.35
+      maxTokens: 480
     }
   );
-  return { text, mode: request.mode, tone: request.tone };
+  if (request.includeMultipleVersions) {
+    const versions = parseRewriteVersions(raw);
+    if (versions.length > 0) {
+      return { versions, mode: request.mode, tone: request.tone };
+    }
+  }
+
+  return { text: raw, mode: request.mode, tone: request.tone };
 }
 
 /** Attempts to parse structured suggestions while handling fallback text. */
-function parseSuggestions(payload: string): RefineSuggestion[] {
+export function parseSuggestions(payload: string): RefineSuggestion[] {
   try {
     const parsed = JSON.parse(payload);
     const arr: unknown = Array.isArray(parsed) ? parsed : parsed?.suggestions;
@@ -183,7 +196,7 @@ function normalizeSuggestion(candidate: unknown): RefineSuggestion | null {
 }
 
 /** Parses the critical error payload with graceful fallback. */
-function parseCriticalErrors(payload: string): CriticalError[] {
+export function parseCriticalErrors(payload: string): CriticalError[] {
   try {
     const parsed = JSON.parse(payload);
     if (Array.isArray(parsed)) {
@@ -215,4 +228,19 @@ function normalizeCriticalError(candidate: unknown): CriticalError | null {
   }
 
   return { span: span.trim(), message: message.trim() };
+}
+
+function parseRewriteVersions(payload: string): string[] {
+  try {
+    const parsed = JSON.parse(payload);
+    const versions = parsed?.versions;
+    if (Array.isArray(versions)) {
+      return versions
+        .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+        .filter((entry) => entry.length > 0);
+    }
+  } catch (error) {
+    console.warn("Rewrite versions parsing failed", error, payload);
+  }
+  return [];
 }

@@ -10,8 +10,15 @@ export type MessageType =
 /** Allowed tones for rewrites and future features. */
 export type Tone = "professional" | "casual" | "technical";
 
-/** Rewrite modes supported in the MVP popup. */
-export type RewriteMode = "structured" | "steps";
+/** Rewrite modes supported in the popup. */
+export type RewriteMode =
+  | "cleaned"
+  | "structured"
+  | "steps"
+  | "template"
+  | "creative"
+  | "expert"
+  | "power";
 
 /** Base shape for all runtime requests. */
 export interface BaseRequest {
@@ -41,6 +48,8 @@ export interface RewriteRequest extends BaseRequest {
   type: "rewrite";
   mode: RewriteMode;
   tone: Tone;
+  includeMultipleVersions: boolean;
+  complexity: number;
 }
 
 /**
@@ -76,7 +85,8 @@ export interface CriticalErrorResult {
 
 /** Result payload for rewrite requests. */
 export interface RewriteResult {
-  text: string;
+  text?: string;
+  versions?: string[];
   mode: RewriteMode;
   tone: Tone;
 }
